@@ -51,13 +51,35 @@ class BeamAssertException(Exception):
 # However the sorting does not go beyond top level therefore [1,2] and [2,1]
 # are considered equal and [[1,2]] and [[2,1]] are not.
 # TODO(silviuc): Add contains_in_any_order-style matchers.
-def equal_to(expected):
+def equal_to(expected, comparator=None):
+  """Create a matcher function to check for equality.
+
+  Args:
+    expected: a value to compare to the actual value of a materialized
+      PCollection.
+    comparator: optionally, a Python-style cmp function to use when comparing
+      the expected value to the actual value.
+
+  Returns:
+    A matcher function which checks that the actual value of a materialized
+    PCollection is equal to the expected value.
+  """
   expected = list(expected)
 
+  def _lists_equal(xs, ys, cmp=None):
+    if cmp is None:
+      return xs == ys
+    if len(xs) != len(ys):
+      return False
+    for x, y in zip(xs, ys):
+      if cmp(x, y) != 0:  # x != y
+        return False
+    return True  # all elements are equal
+
   def _equal(actual):
-    sorted_expected = sorted(expected)
-    sorted_actual = sorted(actual)
-    if sorted_expected != sorted_actual:
+    sorted_expected = sorted(expected, cmp=comparator)
+    sorted_actual = sorted(actual, cmp=comparator)
+    if not _lists_equal(sorted_expected, sorted_actual, cmp=comparator):
       raise BeamAssertException(
           'Failed assert: %r == %r' % (sorted_expected, sorted_actual))
   return _equal

@@ -26,11 +26,32 @@ from apache_beam.testing.util import equal_to
 from apache_beam.testing.util import is_empty
 
 
+class TestClass(object):
+  def __init__(self, number):
+    self.number = number
+
+
 class UtilTest(unittest.TestCase):
 
   def test_assert_that_passes(self):
     with TestPipeline() as p:
-      assert_that(p | Create([1, 2, 3]), equal_to([1, 2, 3]))
+      assert_that(p | Create([3, 1, 2]), equal_to([1, 2, 3]))
+
+  def test_assert_that_passes_with_comparator(self):
+    t1 = TestClass(1)
+    t2 = TestClass(2)
+    t3 = TestClass(3)
+
+    def _cmp(test_class_a, test_class_b):
+      if test_class_a.number < test_class_b.number:
+        return -1
+      elif test_class_b.number < test_class_a.number:
+        return 1
+      return 0
+
+    with TestPipeline() as p:
+      assert_that(p | Create([t3, t1, t2]),
+                  equal_to([t1, t2, t3], comparator=_cmp))
 
   def test_assert_that_fails(self):
     with self.assertRaises(Exception):
